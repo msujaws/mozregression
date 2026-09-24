@@ -90,6 +90,8 @@ class Application(object):
                     recheck_mcp=self.options.prompt_recheck_mcp,
                     allow_other_mcp=self.options.prompt_allow_other_mcp,
                     max_budget_usd=self.options.max_budget_usd,
+                    preferences=self.options.preferences,
+                    cmdargs=self.options.cmdargs,
                 )
             elif self.options.command is None:
                 self._test_runner = ManualTestRunner(

@@ -262,7 +262,8 @@ class AgentTestRunner(TestRunner):
     The agent is run by shelling out to the ``claude`` CLI in headless mode,
     pointed at the MCP through a generated ``--mcp-config``. The MCP launches
     the build itself, so this runner installs the build (to obtain the binary
-    path) but does not start it.
+    path) but does not start it. Because of that, ``--pref`` and ``--arg`` only
+    reach the build by being handed to the MCP, which creates its own profile.
 
     Requires the ``claude`` CLI (installed and authenticated) and Node/``npx``
     on the PATH.
@@ -293,6 +294,8 @@ class AgentTestRunner(TestRunner):
         recheck_mcp=False,
         allow_other_mcp=False,
         max_budget_usd=10.0,
+        preferences=None,
+        cmdargs=None,
     ):
         TestRunner.__init__(self)
         self.instruction = instruction
@@ -302,6 +305,8 @@ class AgentTestRunner(TestRunner):
         self.recheck_mcp = recheck_mcp
         self.allow_other_mcp = allow_other_mcp
         self.max_budget_usd = max_budget_usd
+        self.preferences = preferences or []
+        self.cmdargs = cmdargs or []
 
     def check_prerequisites(self):
         """
@@ -388,6 +393,19 @@ class AgentTestRunner(TestRunner):
         args += ["--firefox-path", binary]
         if self.headless:
             args.append("--headless")
+        for name, value in self.preferences:
+            # The MCP reads "true", "false" and integers back as typed values.
+            if isinstance(value, bool):
+                value = "true" if value else "false"
+            args += ["--pref", "%s=%s" % (name, value)]
+        for arg in self.cmdargs:
+            if arg.startswith("-"):
+                # "=" so the MCP's argument parser does not read it as its own flag.
+                args.append("--firefoxArg=%s" % arg)
+            else:
+                # A URL passed as a Firefox argument is overridden by the MCP's
+                # start page (about:blank), so open it as that page instead.
+                args += ["--startUrl", arg]
         return {
             "mcpServers": {
                 self.MCP_SERVER_NAME: {

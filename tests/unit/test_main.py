@@ -81,6 +81,14 @@ def test_app_get_agent_test_runner(create_app):
     assert app.test_runner.max_budget_usd == 10.0
 
 
+def test_app_get_agent_test_runner_prefs_and_args_forwarded(create_app):
+    app = create_app(
+        ["--prompt", "check", "--pref", "sidebar.verticalTabs:true", "--arg", "about:preferences"]
+    )
+    assert ("sidebar.verticalTabs", True) in app.test_runner.preferences
+    assert "about:preferences" in app.test_runner.cmdargs
+
+
 def test_app_get_agent_test_runner_options_forwarded(create_app):
     app = create_app(
         [

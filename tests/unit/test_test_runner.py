@@ -346,6 +346,22 @@ class TestAgentTestRunner(unittest.TestCase):
         self.assertIn(test_runner.AgentTestRunner.MCP_PACKAGE, args)
         self.assertNotIn(test_runner.AgentTestRunner.MCP_PACKAGE + "@latest", args)
 
+    def test_mcp_config_forwards_prefs_and_start_url(self):
+        self.runner = test_runner.AgentTestRunner(
+            "check",
+            min_version=100,
+            preferences=[("sidebar.verticalTabs", True), ("a.count", 3), ("b.s", "x")],
+            cmdargs=["about:preferences", "--allow-downgrade"],
+        )
+        with patch("mozregression.test_runner.json.dump") as dump:
+            self.evaluate(stdout='{"result": "GOOD"}')
+            config = dump.mock_calls[0][1][0]
+        args = config["mcpServers"]["firefox-devtools"]["args"]
+        prefs = [args[i + 1] for i, a in enumerate(args) if a == "--pref"]
+        self.assertEqual(prefs, ["sidebar.verticalTabs=true", "a.count=3", "b.s=x"])
+        self.assertEqual(args[args.index("--startUrl") + 1], "about:preferences")
+        self.assertIn("--firefoxArg=--allow-downgrade", args)
+
     def test_mcp_config_recheck_fetches_latest(self):
         self.runner = test_runner.AgentTestRunner("check", min_version=100, recheck_mcp=True)
         with patch("mozregression.test_runner.json.dump") as dump:
